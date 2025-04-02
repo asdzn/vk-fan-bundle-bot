@@ -258,8 +258,8 @@ export class ImageProcessingService {
       minFontRatio: 0.06,
     });
     const yPosition = this.calculateTextPosition(fontSize, {
-      maxY: 460,
-      minY: 430,
+      maxY: 480,
+      minY: 460,
       maxFontSize: 144,
       minFontSize: 64,
     });

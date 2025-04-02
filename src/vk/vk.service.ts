@@ -18,6 +18,12 @@ export class VkService implements OnModuleInit {
   #vkUser: VK;
   #configService: ConfigService;
 
+  // Функция для создания случайной задержки от 1 до 3 секунд
+  private async delay(): Promise<void> {
+    const delayMs = Math.floor(Math.random() * 2000) + 1000; // 1000-3000ms
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+
   constructor(
     configService: ConfigService,
     private readonly imageProcessingService: ImageProcessingService,
@@ -146,6 +152,7 @@ export class VkService implements OnModuleInit {
 
   private async uploadPhoto(photo: Buffer, groupId: number) {
     try {
+      await this.delay(); // Добавляем задержку перед запросом
       const uploadServer = await this.#vkUser.api.photos.getWallUploadServer({
         group_id: groupId,
       });
@@ -185,6 +192,7 @@ export class VkService implements OnModuleInit {
         throw new Error('Invalid upload result format');
       }
 
+      await this.delay(); // Добавляем задержку перед сохранением фото
       const [savedPhoto] = await this.#vkUser.api.photos.saveWallPhoto({
         group_id: groupId,
         photo: uploadResult.photo,
@@ -229,6 +237,7 @@ export class VkService implements OnModuleInit {
     groupId: number,
   ) {
     try {
+      await this.delay(); // Добавляем задержку перед запросом
       const uploadServer = await this.#vkUser.api.docs.getMessagesUploadServer({
         type: 'doc',
         peer_id: groupId,
@@ -242,12 +251,11 @@ export class VkService implements OnModuleInit {
       form.append('file', file, {
         filename: fileName,
         contentType: 'application/zip',
-        knownLength: file.length, // Добавляем длину файла
+        knownLength: file.length,
       });
 
       const uploadResponse = await fetch(uploadServer.upload_url, {
         method: 'POST',
-        // Используем form.getHeaders() для правильных заголовков
         headers: form.getHeaders(),
         body: form,
       });
@@ -258,6 +266,7 @@ export class VkService implements OnModuleInit {
 
       const uploadResult = await uploadResponse.json();
 
+      await this.delay(); // Добавляем задержку перед сохранением документа
       const savedDoc = await this.#vkUser.api.docs.save({
         file: uploadResult.file,
         title: fileName,
@@ -284,30 +293,16 @@ export class VkService implements OnModuleInit {
         bundle.avatar,
         Math.abs(groupId),
       );
+      await this.delay(); // Добавляем задержку между загрузками фото
       const coverVkUpload = await this.uploadPhoto(
         bundle.coverVk,
         Math.abs(groupId),
       );
+      await this.delay(); // Добавляем задержку между загрузками фото
       const coverXUpload = await this.uploadPhoto(
         bundle.coverX,
         Math.abs(groupId),
       );
-
-      // Отправляем превью изображений
-      // const photoAttachments = [
-      //   `photo${avatarUpload.owner_id}_${avatarUpload.id}`,
-      //   `photo${coverVkUpload.owner_id}_${coverVkUpload.id}`,
-      //   `photo${coverXUpload.owner_id}_${coverXUpload.id}`,
-      // ].join(',');
-
-      // await this.#vkUser.api.wall.createComment({
-      //   owner_id: context.ownerId,
-      //   post_id: context.objectId,
-      //   reply_to_comment: context.id,
-      //   from_group: Math.abs(groupId),
-      //   message: `Ваш бандл готов! Аватар и обложки для ${nickname}:`,
-      //   attachments: photoAttachments,
-      // });
 
       // Загружаем все изображения как документы
       const coverVkDoc = await this.uploadDocument(
@@ -315,11 +310,13 @@ export class VkService implements OnModuleInit {
         `${nickname}_cover_vk.png`,
         groupId,
       );
+      await this.delay(); // Добавляем задержку между загрузками документов
       const coverXDoc = await this.uploadDocument(
         bundle.coverX,
         `${nickname}_cover_x.png`,
         groupId,
       );
+      await this.delay(); // Добавляем задержку между загрузками документов
       const avatarDoc = await this.uploadDocument(
         bundle.avatar,
         `${nickname}_avatar.png`,
@@ -332,6 +329,7 @@ export class VkService implements OnModuleInit {
         `doc${coverXDoc.doc.owner_id}_${coverXDoc.doc.id}`,
       ].join(',');
 
+      await this.delay(); // Добавляем задержку перед отправкой комментария
       await this.#vkUser.api.wall.createComment({
         owner_id: context.ownerId,
         post_id: context.objectId,
@@ -355,6 +353,7 @@ export class VkService implements OnModuleInit {
         `doc${zipDoc.doc.owner_id}_${zipDoc.doc.id}`,
       ].join(',');
 
+      await this.delay(); // Добавляем задержку перед отправкой второго комментария
       await this.#vkUser.api.wall.createComment({
         owner_id: context.ownerId,
         post_id: context.objectId,
@@ -365,10 +364,7 @@ export class VkService implements OnModuleInit {
       });
     } catch (error) {
       console.error('Ошибка при обработке комментария:', error.message);
-      await this.#sendReply(
-        context,
-        'Произошла ошибка при создании бандла',
-      );
+      await this.#sendReply(context, 'Произошла ошибка при создании бандла');
     }
   };
 }
